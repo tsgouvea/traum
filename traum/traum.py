@@ -69,7 +69,7 @@ class traum:
             assert(np.max(rhos)>.99)
             return(np.argmax(rhos), delta, rhos)
 
-        tsDio = self.dio['time'][self.dio['state']==0]
+        tsDio = self.dio['time'][self.dio['state']==1]
         tsBhv = self.bhv.parsedData['tsState0']-self.bhv.parsedData['tsState0'][0]
 
         if len(tsBhv) > len(tsDio):
@@ -86,7 +86,7 @@ class traum:
         ndxType, colors = trialMask # ndxType {0, 1, 2, ...} is trial type, trials discarded where 0 // len(colors) = len(set(ndx[ndx>0]))
         setType = list(set(ndxType[ndxType>0]))
         offset = 0
-        listAlign = np.array(self.dio['time'][self.dio['state']==0]) + np.array(self.bhv.parsedData[alignment])
+        listAlign = np.array(self.dio['time'][self.dio['state']==1]) + np.array(self.bhv.parsedData[alignment])
         for iType in setType:
             ndx = (ndxType == iType) & (np.logical_not(np.isnan(listAlign)))
             if any(ndx):
