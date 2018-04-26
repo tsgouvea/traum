@@ -81,21 +81,33 @@ class traum:
         self.aligEvent = list(self.bhv.parsedData.columns[[n.startswith('ts') for n in self.bhv.parsedData.columns]])
         self.aligEvent.remove('tsState0')
 
-    def raspeth(self,alignment,iUnit,trialMask,panes,window=(-1,2)):
-        listAlign = np.array(self.dio['time'][self.dio['state']==0][trialMask]) + np.array(self.bhv.parsedData[alignment][trialMask])
-        spikes = [[]]*len(listAlign)
-
-        for iTrial in range(len(listAlign)):
-            temp = self.neur['spikes'][iUnit] - listAlign[iTrial]
-            spikes[iTrial] = temp[(temp>=window[0]) & (temp<=window[1])]
-
+    def raspeth(self,alignment,iUnit,trialMask,panes,window=(-1,2),bins='rice',conv='None'):
         ha_raster, ha_peth = panes
-        ha_raster.eventplot(spikes)
+        ndxType, colors = trialMask # ndxType {0, 1, 2, ...} is trial type, trials discarded where 0 // len(colors) = len(set(ndx[ndx>0]))
+        setType = list(set(ndxType[ndxType>0]))
+        offset = 0
+        listAlign = np.array(self.dio['time'][self.dio['state']==0]) + np.array(self.bhv.parsedData[alignment])
+        for iType in setType:
+            ndx = (ndxType == iType) & (np.logical_not(np.isnan(listAlign)))
+            if any(ndx):
+                spikes = [[]]*sum(ndx)
+                i = 0
+                for iTrial in np.nonzero(ndx)[0]:
+            temp = self.neur['spikes'][iUnit] - listAlign[iTrial]
+                    spikes[i] = temp[(temp>=window[0]) & (temp<=window[1])]
+                    i += 1
 
-        counts, edges = np.histogram([item for sublist in spikes for item in sublist], bins='auto', density=False)
-        ha_peth.plot(edges[:-1]+(edges[1]-edges[0])/2,counts/(edges[1]-edges[0])/len(listAlign))
-        ha_raster.set_ylabel('Trial #')
-        ha_raster.set_title(alignment)
-        ha_peth.set_ylabel('Firing rate')
+                ha_raster.eventplot([[]]*offset + spikes,colors=colors[iType-1])
+                offset += sum(ndx)
+
+                counts, edges = np.histogram([item for sublist in spikes for item in sublist], bins=bins, density=False)
+                if (type(conv)!=str) :# or (conv != 'None') or (conv != 'none'):
+                    counts = np.convolve(counts,conv,mode='same')
+                ha_peth.plot(edges[:-1]+(edges[1]-edges[0])/2,counts/(edges[1]-edges[0])/sum(ndx),color=colors[iType-1])
+
+        """ha_peth.set_ylabel('Firing rate')
         ha_peth.set_xlabel('Time (s)')
-        return ha_raster, ha_peth
+        ha_raster.set_ylabel('Trial #')
+        ha_raster.set_title(alignment)"""
+        #return ha_raster, ha_peth
+        return spikes
