@@ -66,6 +66,12 @@ obj.readDio(pathDIO)
 obj.sync()
 
 
+# ## Positive control
+
+# In[6]:
+
+
+obj.neur = obj.neur.append({'cluster': 0, 'dataset': 'water_', 'spikes': obj.dio['time'][(obj.dio['state']==20) | (obj.dio['state']==21)].values},ignore_index=True)
 # ## Traum
 
 # In[ ]:
