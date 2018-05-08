@@ -87,13 +87,15 @@ class traum:
         setType = list(set(ndxType[ndxType>0]))
         offset = 0
         listAlign = np.array(self.dio['time'][self.dio['state']==1]) + np.array(self.bhv.parsedData[alignment])
+        if type(bins)==int:
+            bins = np.linspace(window[0],window[1],bins)
         for iType in setType:
             ndx = (ndxType == iType) & (np.logical_not(np.isnan(listAlign)))
             if any(ndx):
                 spikes = [[]]*sum(ndx)
                 i = 0
                 for iTrial in np.nonzero(ndx)[0]:
-            temp = self.neur['spikes'][iUnit] - listAlign[iTrial]
+                    temp = self.neur['spikes'][iUnit] - listAlign[iTrial]
                     spikes[i] = temp[(temp>=window[0]) & (temp<=window[1])]
                     i += 1
 
@@ -104,7 +106,8 @@ class traum:
                 if (type(conv)!=str) :# or (conv != 'None') or (conv != 'none'):
                     counts = np.convolve(counts,conv,mode='same')
                 ha_peth.plot(edges[:-1]+(edges[1]-edges[0])/2,counts/(edges[1]-edges[0])/sum(ndx),color=colors[iType-1])
-
+        ha_raster.set_xlim(window)
+        ha_peth.set_xlim(window)
         """ha_peth.set_ylabel('Firing rate')
         ha_peth.set_xlabel('Time (s)')
         ha_raster.set_ylabel('Trial #')

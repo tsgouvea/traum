@@ -103,17 +103,26 @@ listAlign = ('tsCin','tsStimOn','tsStimOff','tsChoice','tsRwd','tsErrTone')
 
 
 # In[ ]:
-conv = spt.norm.pdf(np.linspace(-10,10,21),0,5)
+
+
+window = [-1,2]
+bins = np.arange(window[0],window[1],.005)
+conv = spt.norm.pdf(np.arange(-30,30),0,10)
 conv = conv/sum(conv)
+pathFigs = os.path.join('/Users','thiago','Pictures','Traum',subjName)
+
+
+# In[10]:
+
 
 for iUnit in range(len(obj.neur)):
-    figTitle = sessName + '_unit' + str(iUnit)
+    figTitle = sessName + '_unit' + str(iUnit).zfill(len(str(len(trialMask))))
     hf, ha = plt.subplots(len(trialMask)*2,len(listAlign),figsize=(20,10))
 
     for iMask in range(len(trialMask)):
         for iAlign in range(len(listAlign)) :
             h = (ha[iMask*2,iAlign], ha[iMask*2+1,iAlign])# + '\t' + str() + str(iAlign) + '\n')
-            obj.raspeth(listAlign[iAlign],iUnit,trialMask[iMask],h,bins=301,conv=conv)
+            obj.raspeth(listAlign[iAlign],iUnit,trialMask[iMask],h,bins=bins,conv=conv)
 
             if (iMask == 0) :
                 ha[iMask*2,iAlign].set_title(listAlign[iAlign])
@@ -127,4 +136,6 @@ for iUnit in range(len(obj.neur)):
 
     #plt.suptitle(figTitle,fontsize=20)
     plt.tight_layout()
-    plt.savefig(figTitle + '_301bins_conv.pdf')#,dpi=150,orientation='landscape',papertype='letter',format='eps')
+    plt.savefig(os.path.join(pathFigs,figTitle + '_bin5ms_sd10bins.pdf'))#,dpi=150,orientation='landscape',papertype='letter',format='eps')
+    plt.close(hf)
+
