@@ -7,10 +7,16 @@ from mdaio import readmda
 
 class traum:
 
-    def __init__(self,dataBhv):
+    def __init__(self,dataBhv='none'):
+        self.neur = pd.DataFrame({'spikes': [], 'dataset':[], 'cluster':[]})#, 'waveform_mean':[], 'waveform_std':[], 'nTrode':[], 'cluster':[]})
+        if dataBhv=='none':
+            pass
+        else:
+            self.readBhv(dataBhv)
+
+    def readBhv(self,dataBhv):
         self.bhv = dataBhv
         self.bhv.parsedData['tsState0'] = self.bhv.parsedData['tsState0']-self.bhv.parsedData['tsState0'][0]
-        self.neur = pd.DataFrame({'spikes': [], 'dataset':[], 'cluster':[]})#, 'waveform_mean':[], 'waveform_std':[], 'nTrode':[], 'cluster':[]})
 
     def readDio(self,pathDio,fs=30000):
         listDio = os.listdir(pathDio)
@@ -45,8 +51,11 @@ class traum:
     def readNeur(self,pathNeur,prefix='ms3',filename='firings.curated.mda',fs=30000):
         listNt = np.array(os.listdir(pathNeur))
         listNt = listNt[[n.startswith(prefix) for n in listNt]]
+        listNt.sort()
         assert(len(listNt)>0)
         for nt in listNt:
+            if not os.path.isfile(os.path.join(pathNeur,nt,filename)):
+                continue
             mdaCurated = readmda(os.path.join(pathNeur,nt,filename))
             setClust = list(set(mdaCurated[2,:]))
             setClust.sort()
@@ -56,7 +65,14 @@ class traum:
                 ndx = mdaCurated[2,:] == setClust[i]
                 df_spikes[i] = mdaCurated[1,ndx]
                 df_cluster[i] = int(setClust[i])
-            self.neur = self.neur.append(pd.DataFrame({'spikes': np.array(df_spikes)/fs, 'cluster':df_cluster, 'dataset': nt}),ignore_index=True)
+
+            if len(setClust)==1:
+                df_spikes = [df_spikes[0]/fs]
+            else:
+                df_spikes = np.array(df_spikes)/fs
+
+            self.neur = self.neur.append(pd.DataFrame({'spikes': df_spikes, 'cluster':df_cluster, 'dataset': nt}),ignore_index=True)
+        self.neur.cluster = self.neur.cluster.astype(int)
         self.rawNeur = mdaCurated
 
     def sync(self):
