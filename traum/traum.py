@@ -28,25 +28,26 @@ class traum:
             df_temp = pd.DataFrame(x['data'])
             df_temp['channel'] = iDio
             df_singleChanges = df_singleChanges.append(df_temp)
+
+        df_singleChanges.channel = df_singleChanges.channel.astype(int)
+        df_singleChanges.state = df_singleChanges.state.astype(int)
         timeSet = sorted(set(df_singleChanges['time']))
-        t0 = timeSet[0]
-        timeSet.remove(t0)
-        time = [t0]
-        stateBin = ['0'*len(set(df_singleChanges['channel']))]
-        state = [int(stateBin[-1], 2)]
+        time = []
+        stateBin = []
+        state = []
 
         for t in timeSet:
             df_t = df_singleChanges[df_singleChanges['time'] == t]
-            sbin = list(stateBin[-1][::-1])
-            listStates = df_t['state']
+            sbin = list(stateBin[-1]) if stateBin else list([['X']*len(set(df_singleChanges['channel']))][0])
             for c in df_t['channel']:
-                sbin[int(c)] = str(int(listStates[c==df_t['channel']]))
+                sbin[c] = df_t[df_t['channel']==c]['state'].values.astype(str).item()
+            assert('X' not in sbin), "Initial state of some channels not defined: " + ''.join(sbin)
             time.append(t)
-            stateBin.append(''.join(sbin)[::-1])
+            stateBin.append(''.join(sbin))
             state.append(int(stateBin[-1], 2))
 
-        self.dio = pd.DataFrame({'time':np.array(time)/fs, 'state':state, 'stateBin':stateBin})
-        self.dio['time'] = self.dio['time']
+        self.dio = pd.DataFrame({'time':np.array(time)/fs, 'state':state, 'stateBin':stateBin, 'iTrial':np.cumsum(np.array(state)==0)-1})
+        self.dio = self.dio.set_index('iTrial')
 
     def readNeur(self,pathNeur,prefix='ms3',filename='firings.curated.mda',fs=30000):
         listNt = np.array(os.listdir(pathNeur))
@@ -64,16 +65,12 @@ class traum:
             for i in range(len(setClust)):
                 ndx = mdaCurated[2,:] == setClust[i]
                 df_spikes[i] = mdaCurated[1,ndx]
-                df_cluster[i] = int(setClust[i])
+                df_cluster[i] = setClust[i]
 
-            if len(setClust)==1:
-                df_spikes = [df_spikes[0]/fs]
-            else:
-                df_spikes = np.array(df_spikes)/fs
+            df_spikes = [df_spikes[0]/fs] if len(setClust)==1 else np.array(df_spikes)/fs
 
             self.neur = self.neur.append(pd.DataFrame({'spikes': df_spikes, 'cluster':df_cluster, 'dataset': nt}),ignore_index=True)
         self.neur.cluster = self.neur.cluster.astype(int)
-        self.rawNeur = mdaCurated
 
     def sync(self):
 
@@ -94,6 +91,10 @@ class traum:
         elif len(tsDio) > len(tsBhv):
             i, delta, rhos = trim(tsDio,tsBhv)
             self.dio = self.dio[(self.dio['time'] < tsDio.iloc[i+len(tsBhv)]) & (self.dio['time'] >= tsDio.iloc[i])]
+        else:
+            i, delta, rhos = trim(tsDio,tsBhv)
+        print('at traum.sync():\nCorrelation coefficients for all alignments:')
+        print(rhos)
         self.aligEvent = list(self.bhv.parsedData.columns[[n.startswith('ts') for n in self.bhv.parsedData.columns]])
         self.aligEvent.remove('tsState0')
 
