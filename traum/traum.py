@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 
-from mdaio import readmda
+from traum.mdaio import readmda
 
 class traum:
 
@@ -19,15 +19,18 @@ class traum:
         self.bhv.parsedData['tsState0'] = self.bhv.parsedData['tsState0']-self.bhv.parsedData['tsState0'][0]
 
     def readDio(self,pathDio,fs=30000):
-        listDio = os.listdir(pathDio)
+        from .readTrodesExtractedDataFile3 import readTrodesExtractedDataFile3 as readDat
+
+        listDio = np.array(os.listdir(pathDio))
+        listDio = listDio[['Din' in n for n in listDio]]
         listDio.sort()
         df_singleChanges = pd.DataFrame({'channel': [], 'state': [], 'time': []})
-        from readTrodesExtractedDataFile import readTrodesExtractedDataFile as readDat
+
         for iDio in range(len(listDio)):
             x = readDat(os.path.join(pathDio,listDio[iDio]))
             df_temp = pd.DataFrame(x['data'])
             df_temp['channel'] = iDio
-            df_singleChanges = df_singleChanges.append(df_temp)
+            df_singleChanges = df_singleChanges.append(df_temp,sort=True)
 
         df_singleChanges.channel = df_singleChanges.channel.astype(int)
         df_singleChanges.state = df_singleChanges.state.astype(int)
@@ -69,7 +72,7 @@ class traum:
 
             df_spikes = [df_spikes[0]/fs] if len(setClust)==1 else np.array(df_spikes)/fs
 
-            self.neur = self.neur.append(pd.DataFrame({'spikes': df_spikes, 'cluster':df_cluster, 'dataset': nt}),ignore_index=True)
+            self.neur = self.neur.append(pd.DataFrame({'spikes': df_spikes, 'cluster':df_cluster, 'dataset': nt}),ignore_index=True,sort=False)
         self.neur.cluster = self.neur.cluster.astype(int)
 
     def sync(self):
