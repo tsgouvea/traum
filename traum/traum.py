@@ -52,7 +52,9 @@ class traum:
         self.dio = pd.DataFrame({'time':np.array(time)/fs, 'state':state, 'stateBin':stateBin, 'iTrial':np.cumsum(np.array(state)==0)-1})
         self.dio = self.dio.set_index('iTrial')
 
-    def readNeur(self,pathNeur,prefix='ms3',filename='firings.curated.mda',fs=30000):
+    def readNeur(self,pathNeur,pathTs,prefix='ms3',filename='firings.curated.mda',fs=30000.):
+        fs = float(fs)
+        ts = readmda(pathTs)
         listNt = np.array(os.listdir(pathNeur))
         listNt = listNt[[n.startswith(prefix) for n in listNt]]
         listNt.sort()
@@ -61,13 +63,15 @@ class traum:
             if not os.path.isfile(os.path.join(pathNeur,nt,filename)):
                 continue
             mdaCurated = readmda(os.path.join(pathNeur,nt,filename))
+            if mdaCurated.size == 0:
+                continue
             setClust = list(set(mdaCurated[2,:]))
             setClust.sort()
             df_spikes = [[]]*len(setClust)
             df_cluster = np.empty(len(setClust),np.int)
             for i in range(len(setClust)):
                 ndx = mdaCurated[2,:] == setClust[i]
-                df_spikes[i] = mdaCurated[1,ndx]
+                df_spikes[i] = ts[mdaCurated[1,ndx].astype(int)-1]
                 df_cluster[i] = setClust[i]
 
             df_spikes = [df_spikes[0]/fs] if len(setClust)==1 else np.array(df_spikes)/fs
