@@ -60,6 +60,7 @@ class traum:
         listNt.sort()
         assert(len(listNt)>0)
         for nt in listNt:
+
             if not os.path.isfile(os.path.join(pathNeur,nt,filename)):
                 continue
             mdaCurated = readmda(os.path.join(pathNeur,nt,filename))
@@ -72,6 +73,7 @@ class traum:
             for i in range(len(setClust)):
                 ndx = mdaCurated[2,:] == setClust[i]
                 df_spikes[i] = ts[mdaCurated[1,ndx].astype(int)-1]
+                # df_spikes[i] = mdaCurated[1,ndx]
                 df_cluster[i] = setClust[i]
 
             df_spikes = [df_spikes[0]/fs] if len(setClust)==1 else np.array(df_spikes)/fs
@@ -106,11 +108,14 @@ class traum:
         self.aligEvent.remove('tsState0')
 
     def raspeth(self,alignment,iUnit,trialMask,panes,window=(-1,2),bins='rice',conv='None'):
-        ha_raster, ha_peth = panes
+        alignment = np.array(self.bhv.parsedData[alignment]) if (type(alignment)==str and alignment in self.bhv.parsedData.columns) else alignment # can be either column of self.bhv.parsedData or new np.array
+        listAlign = np.array(self.dio['time'][self.dio['state']==1]) + alignment
         ndxType, colors = trialMask # ndxType {0, 1, 2, ...} is trial type, trials discarded where 0 // len(colors) = len(set(ndx[ndx>0]))
-        setType = list(set(ndxType[ndxType>0]))
+        ndxType=ndxType.astype(int)
+        setType = np.unique(ndxType[ndxType>0])
+        setType.sort()
+        ha_raster, ha_peth = panes
         offset = 0
-        listAlign = np.array(self.dio['time'][self.dio['state']==1]) + np.array(self.bhv.parsedData[alignment])
         if type(bins)==int:
             bins = np.linspace(window[0],window[1],bins)
         for iType in setType:
@@ -123,13 +128,19 @@ class traum:
                     spikes[i] = temp[(temp>=window[0]) & (temp<=window[1])]
                     i += 1
 
-                ha_raster.eventplot([[]]*offset + spikes,colors=colors[iType-1])
+                try:
+                    ha_raster.eventplot([[]]*offset + spikes,colors=colors[iType-1])
+                except IndexError as e:
+                    print(e)
+                    print(iType)
+                    print(colors[iType-1])
+
                 offset += sum(ndx)
 
-                counts, edges = np.histogram([item for sublist in spikes for item in sublist], bins=bins, density=False)
-                if (type(conv)!=str) :# or (conv != 'None') or (conv != 'none'):
-                    counts = np.convolve(counts,conv,mode='same')
-                ha_peth.plot(edges[:-1]+(edges[1]-edges[0])/2,counts/(edges[1]-edges[0])/sum(ndx),color=colors[iType-1])
+            counts, edges = np.histogram([item for sublist in spikes for item in sublist], bins=bins, density=False)
+            if (type(conv)!=str) :# or (conv != 'None') or (conv != 'none'):
+                counts = np.convolve(counts,conv,mode='same')
+            ha_peth.plot(edges[:-1]+(edges[1]-edges[0])/2,counts/(edges[1]-edges[0])/sum(ndx),color=colors[iType-1])
         ha_raster.set_xlim(window)
         ha_peth.set_xlim(window)
         """ha_peth.set_ylabel('Firing rate')
